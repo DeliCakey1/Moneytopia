@@ -1,6 +1,5 @@
 const LANE_COUNT = 4;
 const LANE_KEYS = ['d', 'f', 'j', 'k'];
-const GAME_SPEED = 1.0;
 const NOTE_HEIGHT = 60;
 
 let canvas, ctx;
@@ -19,6 +18,8 @@ let goodCount = 0;
 let missCount = 0;
 let hitZoneY = 0;
 let currentSong = null;
+let currentAudio = null;
+let audioStarted = false;
 
 function getSongDuration() {
   return currentSong ? currentSong.duration : 45;
@@ -133,15 +134,22 @@ function gameLoop(timestamp) {
   if (!gameRunning) return;
 
   if (!lastFrameTime) lastFrameTime = timestamp;
-  const delta = Math.min((timestamp - lastFrameTime) / 1000, 0.05);
-  lastFrameTime = timestamp;
 
-  songTime += delta;
-
-  if (songTime >= getSongDuration() + 3) {
-    endGame();
-    return;
+  if (audioStarted && currentAudio) {
+    songTime = currentAudio.currentTime;
+    if (currentAudio.ended || songTime >= getSongDuration()) {
+      endGame();
+      return;
+    }
+  } else {
+    const delta = Math.min((timestamp - lastFrameTime) / 1000, 0.05);
+    songTime += delta;
+    if (songTime >= getSongDuration() + 3) {
+      endGame();
+      return;
+    }
   }
+  lastFrameTime = timestamp;
 
   for (const note of notes) {
     if (note.hit || note.missed) continue;
@@ -247,13 +255,11 @@ function startGame() {
   canvasWrapper.style.display = 'block';
   
   currentSong = SONGS[Math.floor(Math.random() * SONGS.length)];
-  songNameEl.textContent = currentSong.name + ' - ' + currentSong.bpm + ' BPM';
+  songNameEl.textContent = currentSong.artist + ' - ' + currentSong.name + ' (' + currentSong.bpm + ' BPM)';
   songNameEl.style.display = 'block';
   
   initGameCanvas();
   generateNotesFromSong();
-  
-  initAudio();
   
   gameScore = 0;
   songTime = -3;
@@ -265,13 +271,18 @@ function startGame() {
   lastFrameTime = 0;
   gameRunning = true;
   keysPressed = {};
+  audioStarted = false;
+
+  try {
+    currentAudio = new Audio(currentSong.file);
+    currentAudio.load();
+  } catch (e) {
+    currentAudio = null;
+  }
 
   updateGameUI();
   
   if (animationId) cancelAnimationFrame(animationId);
-  
-  const songStartTime = audioCtx.currentTime + 3.5;
-  playSong(audioCtx, currentSong, songStartTime);
   
   let count = 3;
   countdownEl.textContent = count;
@@ -284,6 +295,10 @@ function startGame() {
       countdownEl.textContent = count;
     } else if (count === 0) {
       countdownEl.textContent = 'GO!';
+      if (currentAudio) {
+        currentAudio.play().catch(function(e) {});
+        audioStarted = true;
+      }
     } else {
       countdownEl.style.display = 'none';
       clearInterval(countdownInterval);
@@ -301,7 +316,10 @@ function endGame() {
     animationId = null;
   }
 
-  stopSong();
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
   document.getElementById('game-song').style.display = 'none';
 
   const coinsEarned = Math.floor(gameScore / 50) + Math.floor(maxCombo / 5);
