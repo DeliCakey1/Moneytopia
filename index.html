@@ -13,7 +13,7 @@
     <h1 class="game-title">MONEYTOPIA</h1>
     <p class="subtitle">Play. Earn. Survive.</p>
     <div class="stats-bar">
-      <span>🪙 <span id="menu-coins">0</span></span>
+      <span>$ <span id="menu-coins">0.00</span></span>
       <span>❤️ <span id="menu-hearts">100</span>/100</span>
       <span>🏆 <span id="menu-highscore">0</span></span>
     </div>
@@ -27,7 +27,7 @@
 
   <div id="view-game" class="view">
   <div class="game-header">
-    <span>🪙 <span id="game-coins">0</span></span>
+    <span>$ <span id="game-coins">0.00</span></span>
     <span>❤️ <span id="game-hearts">100</span></span>
     <span>Score: <span id="game-score">0</span></span>
   </div>
@@ -55,8 +55,8 @@
         <span class="result-value" id="result-score">0</span>
       </div>
       <div class="result-item">
-        <span class="result-label">Coins Earned</span>
-        <span class="result-value coin" id="result-coins">+0</span>
+        <span class="result-label">Money Earned</span>
+        <span class="result-value coin" id="result-coins">+$0.00</span>
       </div>
       <div class="result-item">
         <span class="result-label">Hearts Lost</span>
@@ -74,7 +74,7 @@
 <div id="view-shop" class="view">
   <div class="shop-container">
     <h2>🛒 SHOP</h2>
-    <p class="shop-coins">Your Coins: 🪙 <span id="shop-coins">0</span></p>
+    <p class="shop-coins">Your Money: $ <span id="shop-coins">0.00</span></p>
     <div id="shop-items" class="shop-items"></div>
     <button class="btn btn-back" onclick="showView('menu')">BACK</button>
   </div>

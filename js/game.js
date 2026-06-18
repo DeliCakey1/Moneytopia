@@ -137,7 +137,11 @@ function gameLoop(timestamp) {
 
   if (audioStarted && currentAudio) {
     songTime = currentAudio.currentTime;
-    if (currentAudio.ended || songTime >= getSongDuration()) {
+    if (currentAudio.ended) {
+      endGame();
+      return;
+    }
+    if (!isNaN(currentAudio.duration) && songTime >= currentAudio.duration) {
       endGame();
       return;
     }
@@ -296,7 +300,16 @@ function startGame() {
     } else if (count === 0) {
       countdownEl.textContent = 'GO!';
       if (currentAudio) {
-        currentAudio.play().catch(function(e) {});
+        currentAudio.play().catch(function(e) {
+          currentAudio = null;
+          audioStarted = false;
+        });
+        setTimeout(function() {
+          if (currentAudio && currentAudio.readyState < 2) {
+            currentAudio = null;
+            audioStarted = false;
+          }
+        }, 3000);
         audioStarted = true;
       }
     } else {
@@ -322,12 +335,12 @@ function endGame() {
   }
   document.getElementById('game-song').style.display = 'none';
 
-  const coinsEarned = Math.floor(gameScore / 50) + Math.floor(maxCombo / 5);
-  const heartsLost = 4 + Math.floor(Math.random() * 4);
+  const centsEarned = Math.floor(gameScore / 100);
+  const heartsLost = 7 + Math.floor(Math.random() * 6);
 
   const gameResult = {
     score: gameScore,
-    coinsEarned: Math.max(1, coinsEarned),
+    coinsEarned: Math.max(1, centsEarned),
     heartsLost,
     maxCombo,
     perfectCount,
@@ -343,7 +356,7 @@ function endGame() {
 
 function updateGameUI() {
   const state = window.gameState;
-  document.getElementById('game-coins').textContent = state.coins;
+  document.getElementById('game-coins').textContent = formatMoney(state.coins);
   document.getElementById('game-hearts').textContent = state.hearts;
   document.getElementById('game-score').textContent = gameScore;
 }

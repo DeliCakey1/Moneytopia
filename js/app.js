@@ -1,13 +1,18 @@
 const FOOD_ITEMS = [
-  { id: 'bread', name: '🍞 Bread', desc: 'Restores 5❤️', price: 3, hearts: 5 },
-  { id: 'sandwich', name: '🥪 Sandwich', desc: 'Restores 12❤️', price: 8, hearts: 12 },
-  { id: 'salad', name: '🥗 Salad', desc: 'Restores 20❤️', price: 14, hearts: 20 },
-  { id: 'pizza', name: '🍕 Pizza', desc: 'Restores 30❤️', price: 22, hearts: 30 },
-  { id: 'steak', name: '🥩 Steak', desc: 'Restores 45❤️', price: 35, hearts: 45 },
-  { id: 'golden_apple', name: '🍎 Golden Apple', desc: 'Restores 75❤️', price: 55, hearts: 75 }
+  { id: 'bread', name: '🍞 Bread', desc: 'Restores 5❤️', price: 12, hearts: 5 },
+  { id: 'sandwich', name: '🥪 Sandwich', desc: 'Restores 12❤️', price: 25, hearts: 12 },
+  { id: 'salad', name: '🥗 Salad', desc: 'Restores 20❤️', price: 38, hearts: 20 },
+  { id: 'pizza', name: '🍕 Pizza', desc: 'Restores 30❤️', price: 55, hearts: 30 },
+  { id: 'steak', name: '🥩 Steak', desc: 'Restores 45❤️', price: 78, hearts: 45 },
+  { id: 'golden_apple', name: '🍎 Golden Apple', desc: 'Restores 75❤️', price: 110, hearts: 75 }
 ];
 
 let gameState = {};
+
+function formatMoney(cents) {
+  return '$' + (cents / 100).toFixed(2);
+}
+
 
 function init() {
   gameState = loadGame();
@@ -30,11 +35,11 @@ function showView(viewId) {
 }
 
 function updateAllUI() {
-  document.getElementById('menu-coins').textContent = gameState.coins;
+  document.getElementById('menu-coins').textContent = formatMoney(gameState.coins);
   document.getElementById('menu-hearts').textContent = gameState.hearts;
   document.getElementById('menu-highscore').textContent = gameState.highScore;
   
-  document.getElementById('shop-coins').textContent = gameState.coins;
+  document.getElementById('shop-coins').textContent = formatMoney(gameState.coins);
   document.getElementById('eat-hearts').textContent = gameState.hearts;
   
   renderShop();
@@ -55,7 +60,7 @@ function renderShop() {
         <div class="shop-item-desc">${item.desc}</div>
       </div>
       <div>
-        <span class="shop-item-price">🪙${item.price}</span>
+        <span class="shop-item-price">${formatMoney(item.price)}</span>
         <button class="btn btn-buy" ${canBuy ? '' : 'disabled'} onclick="buyFood('${item.id}')">
           BUY
         </button>
@@ -139,7 +144,7 @@ function finishRound(result) {
   }
   
   document.getElementById('result-score').textContent = result.score;
-  document.getElementById('result-coins').textContent = '+' + result.coinsEarned;
+  document.getElementById('result-coins').textContent = '+' + formatMoney(result.coinsEarned);
   document.getElementById('result-hearts').textContent = '-' + result.heartsLost;
   document.getElementById('result-hearts-left').textContent = gameState.hearts;
   
