@@ -1,10 +1,10 @@
 const FOOD_ITEMS = [
-  { id: 'bread', name: '🍞 Bread', desc: 'Restores 5❤️', price: 12, hearts: 5 },
-  { id: 'sandwich', name: '🥪 Sandwich', desc: 'Restores 12❤️', price: 25, hearts: 12 },
-  { id: 'salad', name: '🥗 Salad', desc: 'Restores 20❤️', price: 38, hearts: 20 },
-  { id: 'pizza', name: '🍕 Pizza', desc: 'Restores 30❤️', price: 55, hearts: 30 },
-  { id: 'steak', name: '🥩 Steak', desc: 'Restores 45❤️', price: 78, hearts: 45 },
-  { id: 'golden_apple', name: '🍎 Golden Apple', desc: 'Restores 75❤️', price: 110, hearts: 75 }
+  { id: 'bread', name: '🍞 Bread', desc: 'Restores 5❤️', price: 25, hearts: 5 },
+  { id: 'sandwich', name: '🥪 Sandwich', desc: 'Restores 12❤️', price: 50, hearts: 12 },
+  { id: 'salad', name: '🥗 Salad', desc: 'Restores 20❤️', price: 75, hearts: 20 },
+  { id: 'pizza', name: '🍕 Pizza', desc: 'Restores 30❤️', price: 110, hearts: 30 },
+  { id: 'steak', name: '🥩 Steak', desc: 'Restores 45❤️', price: 150, hearts: 45 },
+  { id: 'golden_apple', name: '🍎 Golden Apple', desc: 'Restores 75❤️', price: 220, hearts: 75 }
 ];
 
 let gameState = {};

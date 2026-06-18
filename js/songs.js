@@ -141,3 +141,116 @@ function generateSongNotes(song) {
   notes.sort((a, b) => a.time - b.time);
   return notes;
 }
+
+let _noiseBuf = null;
+
+function _getNoise(ctx) {
+  if (!_noiseBuf) {
+    const len = ctx.sampleRate * 0.2;
+    const b = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    _noiseBuf = b;
+  }
+  return _noiseBuf;
+}
+
+function _pKick(ctx, t, vol) {
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.frequency.setValueAtTime(150, t);
+  o.frequency.exponentialRampToValueAtTime(30, t + 0.12);
+  o.type = 'sine';
+  g.gain.setValueAtTime(vol * 0.35, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+  o.start(t); o.stop(t + 0.2);
+}
+
+function _pClap(ctx, t, vol) {
+  const src = ctx.createBufferSource();
+  src.buffer = _getNoise(ctx);
+  const f = ctx.createBiquadFilter();
+  f.type = 'bandpass'; f.frequency.value = 2000; f.Q.value = 1.5;
+  const g = ctx.createGain();
+  src.connect(f); f.connect(g); g.connect(ctx.destination);
+  g.gain.setValueAtTime(vol * 0.1, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+  src.start(t); src.stop(t + 0.1);
+}
+
+function _pHat(ctx, t, vol) {
+  const src = ctx.createBufferSource();
+  src.buffer = _getNoise(ctx);
+  const f = ctx.createBiquadFilter();
+  f.type = 'highpass'; f.frequency.value = 5000;
+  const g = ctx.createGain();
+  src.connect(f); f.connect(g); g.connect(ctx.destination);
+  g.gain.setValueAtTime(vol * 0.06, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+  src.start(t); src.stop(t + 0.06);
+}
+
+function _pBass(ctx, freq, t, dur) {
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.frequency.setValueAtTime(freq, t);
+  o.type = 'sawtooth';
+  g.gain.setValueAtTime(0.05, t);
+  g.gain.linearRampToValueAtTime(0.03, t + dur * 0.3);
+  g.gain.setValueAtTime(0.03, t + dur - 0.03);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+
+function _pLead(ctx, freq, t, dur) {
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.frequency.setValueAtTime(freq, t);
+  o.type = 'square';
+  g.gain.setValueAtTime(0.03, t);
+  g.gain.linearRampToValueAtTime(0.02, t + dur * 0.3);
+  g.gain.setValueAtTime(0.02, t + dur - 0.04);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+
+function playProceduralSong(ctx, song, startTime) {
+  if (!ctx) return;
+  const beatDur = 60 / song.bpm;
+  const beats = getBeatsInSong(song);
+  const chordChanges = Math.floor(beats / 4);
+
+  for (let beat = 0; beat < beats; beat++) {
+    const t = startTime + beat * beatDur;
+    const bm = beat % 4;
+    const ci = Math.floor(beat / 4) % song.chords.length;
+    const chord = song.chords[ci];
+
+    if (bm === 0) _pKick(ctx, t, 1.0);
+    if (bm === 2) _pKick(ctx, t, 0.7);
+    _pHat(ctx, t, 0.7);
+    _pHat(ctx, t + beatDur / 2, 0.4);
+    if (bm === 1 || bm === 3) _pClap(ctx, t, 0.6);
+
+    if (bm === 0) _pBass(ctx, chord.root, t, beatDur * 1.5);
+    else if (bm === 2) _pBass(ctx, chord.root * 2, t, beatDur * 0.8);
+  }
+
+  for (let ci = 0; ci < chordChanges; ci++) {
+    const startBeat = ci * 4;
+    const chord = song.chords[ci % song.chords.length];
+    const ct = startTime + startBeat * beatDur;
+    for (let i = 0; i < 8; i++) {
+      const ni = i % chord.notes.length;
+      const oct = Math.floor(i / chord.notes.length);
+      const freq = chord.notes[ni] * (oct > 0 ? 2 : 1);
+      const nt = ct + i * beatDur * 0.5;
+      if (nt - startTime < song.duration) {
+        _pLead(ctx, freq * 2, nt, beatDur * 0.4);
+      }
+    }
+  }
+}

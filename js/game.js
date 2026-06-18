@@ -277,12 +277,16 @@ function startGame() {
   keysPressed = {};
   audioStarted = false;
 
-  try {
-    currentAudio = new Audio(currentSong.file);
-    currentAudio.load();
-  } catch (e) {
-    currentAudio = null;
-  }
+  let hasMp3 = false;
+  fetch(currentSong.file, { method: 'HEAD' }).then(function(r) {
+    hasMp3 = r.ok;
+    if (hasMp3 && gameRunning) {
+      try {
+        currentAudio = new Audio(currentSong.file);
+        currentAudio.load();
+      } catch (e) {}
+    }
+  }).catch(function() {});
 
   updateGameUI();
   
@@ -293,24 +297,21 @@ function startGame() {
   countdownEl.style.display = 'block';
   
   if (countdownInterval) clearInterval(countdownInterval);
-  countdownInterval = setInterval(() => {
+  countdownInterval = setInterval(function() {
     count--;
     if (count > 0) {
       countdownEl.textContent = count;
     } else if (count === 0) {
       countdownEl.textContent = 'GO!';
-      if (currentAudio) {
-        currentAudio.play().catch(function(e) {
-          currentAudio = null;
-          audioStarted = false;
-        });
-        setTimeout(function() {
-          if (currentAudio && currentAudio.readyState < 2) {
-            currentAudio = null;
-            audioStarted = false;
-          }
-        }, 3000);
-        audioStarted = true;
+      if (hasMp3 && currentAudio) {
+        currentAudio.play().then(function() {
+          audioStarted = true;
+        }).catch(function() {});
+      } else {
+        initAudio();
+        if (audioCtx) {
+          playProceduralSong(audioCtx, currentSong, audioCtx.currentTime + 0.3);
+        }
       }
     } else {
       countdownEl.style.display = 'none';
