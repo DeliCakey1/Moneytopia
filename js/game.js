@@ -277,16 +277,26 @@ function startGame() {
   keysPressed = {};
   audioStarted = false;
 
+  initAudio();
+
   let hasMp3 = false;
+  let mp3Checked = false;
   fetch(currentSong.file, { method: 'HEAD' }).then(function(r) {
     hasMp3 = r.ok;
+    mp3Checked = true;
     if (hasMp3 && gameRunning) {
       try {
         currentAudio = new Audio(currentSong.file);
         currentAudio.load();
       } catch (e) {}
     }
-  }).catch(function() {});
+  }).catch(function() { mp3Checked = true; });
+
+  setTimeout(function() {
+    if (!mp3Checked && gameRunning) {
+      mp3Checked = true;
+    }
+  }, 2000);
 
   updateGameUI();
   
@@ -303,15 +313,19 @@ function startGame() {
       countdownEl.textContent = count;
     } else if (count === 0) {
       countdownEl.textContent = 'GO!';
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
       if (hasMp3 && currentAudio) {
         currentAudio.play().then(function() {
           audioStarted = true;
-        }).catch(function() {});
-      } else {
-        initAudio();
-        if (audioCtx) {
-          playProceduralSong(audioCtx, currentSong, audioCtx.currentTime + 0.3);
-        }
+        }).catch(function() {
+          if (audioCtx) {
+            playProceduralSong(audioCtx, currentSong, audioCtx.currentTime + 0.3);
+          }
+        });
+      } else if (audioCtx) {
+        playProceduralSong(audioCtx, currentSong, audioCtx.currentTime + 0.3);
       }
     } else {
       countdownEl.style.display = 'none';
