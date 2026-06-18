@@ -234,39 +234,67 @@ function _getChords(song) {
   return chords;
 }
 
-function playProceduralSong(ctx, song, startTime) {
+// Real-time procedural audio state
+let _procLastBeat = -1;
+let _procChords = [];
+let _procLeadIdx = 0;
+let _procActive = false;
+
+function startRoundAudio(ctx, song) {
   if (!ctx) return;
+  _procLastBeat = -1;
+  _procLeadIdx = 0;
+  _procChords = _getChords(song);
+  _procActive = true;
+
+  try {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.setValueAtTime(440, ctx.currentTime);
+    o.type = 'sine';
+    g.gain.setValueAtTime(0.3, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    o.start(ctx.currentTime);
+    o.stop(ctx.currentTime + 0.2);
+  } catch(e) { console.error('Test beep failed:', e); }
+}
+
+function stopRoundAudio() {
+  _procActive = false;
+}
+
+function updateProceduralAudio(ctx, song, songTime) {
+  if (!ctx || !_procActive || !song) return;
+
+  if (ctx.state === 'suspended') { ctx.resume(); return; }
+  if (ctx.state === 'closed') return;
+
   const beatDur = 60 / song.bpm;
-  const beats = getBeatsInSong(song);
-  const chords = _getChords(song);
+  const beat = Math.floor(songTime / beatDur);
+  if (beat === _procLastBeat || beat < 0) return;
+  _procLastBeat = beat;
 
-  for (let beat = 0; beat < beats; beat++) {
-    const t = startTime + beat * beatDur;
+  try {
+    const now = ctx.currentTime;
     const bm = beat % 4;
-    const ci = Math.floor(beat / 4) % chords.length;
-    const chord = chords[ci];
+    const ci = Math.floor(beat / 4) % _procChords.length;
+    const chord = _procChords[ci];
 
-    if (bm === 0) _pKick(ctx, t, 1.0);
-    if (bm === 2) _pKick(ctx, t, 0.7);
-    _pHat(ctx, t, 0.7);
-    _pHat(ctx, t + beatDur / 2, 0.4);
-    if (bm === 1 || bm === 3) _pClap(ctx, t, 0.6);
+    if (bm === 0) _pKick(ctx, now, 1.0);
+    else if (bm === 2) _pKick(ctx, now, 0.7);
+    if (bm === 1 || bm === 3) _pClap(ctx, now, 0.6);
+    _pHat(ctx, now, 0.7);
 
-    if (bm === 0) _pBass(ctx, chord.root, t, beatDur * 1.5);
-    else if (bm === 2) _pBass(ctx, chord.root * 2, t, beatDur * 0.8);
-  }
+    if (bm === 0) _pBass(ctx, chord.root, now, beatDur * 1.5);
+    else if (bm === 2) _pBass(ctx, chord.root * 2, now, beatDur * 0.8);
 
-  for (let ci = 0; ci < chords.length; ci++) {
-    const chord = chords[ci];
-    const ct = startTime + ci * 4 * beatDur;
-    for (let i = 0; i < 8; i++) {
-      const ni = i % chord.notes.length;
-      const oct = Math.floor(i / chord.notes.length);
+    if (chord && chord.notes && chord.notes.length > 0) {
+      const ni = _procLeadIdx % chord.notes.length;
+      const oct = Math.floor(_procLeadIdx / chord.notes.length) % 2;
       const freq = chord.notes[ni] * (oct > 0 ? 2 : 1);
-      const nt = ct + i * beatDur * 0.5;
-      if (nt - startTime < song.duration) {
-        _pLead(ctx, freq * 2, nt, beatDur * 0.4);
-      }
+      _pLead(ctx, freq * 2, now, beatDur * 0.7);
+      _procLeadIdx++;
     }
-  }
+  } catch(e) { console.error('updateProceduralAudio error:', e); }
 }

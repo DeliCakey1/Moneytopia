@@ -165,6 +165,7 @@ function gameLoop(timestamp) {
     }
   }
 
+  updateProceduralAudio(audioCtx, currentSong, songTime);
   updateGameUI();
   drawGame();
   animationId = requestAnimationFrame(gameLoop);
@@ -278,6 +279,7 @@ function startGame() {
   audioStarted = false;
 
   initAudio();
+  console.log('AudioContext state after init:', audioCtx ? audioCtx.state : 'null');
 
   let hasMp3 = false;
   let mp3Checked = false;
@@ -288,9 +290,12 @@ function startGame() {
       try {
         currentAudio = new Audio(currentSong.file);
         currentAudio.load();
-      } catch (e) {}
+      } catch (e) { console.error('Audio load error:', e); }
     }
-  }).catch(function() { mp3Checked = true; });
+  }).catch(function() {
+    mp3Checked = true;
+    console.log('MP3 check failed (expected - no audio files)');
+  });
 
   setTimeout(function() {
     if (!mp3Checked && gameRunning) {
@@ -313,19 +318,36 @@ function startGame() {
       countdownEl.textContent = count;
     } else if (count === 0) {
       countdownEl.textContent = 'GO!';
-      if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
+
+      function beginAudio() {
+        console.log('beginAudio called, audioCtx state:', audioCtx ? audioCtx.state : 'null');
+        if (hasMp3 && currentAudio) {
+          currentAudio.play().then(function() {
+            audioStarted = true;
+            console.log('MP3 playback started');
+          }).catch(function(e) {
+            console.log('MP3 playback failed, starting procedural:', e);
+            startRoundAudio(audioCtx, currentSong);
+          });
+        } else if (audioCtx) {
+          console.log('Starting procedural audio');
+          startRoundAudio(audioCtx, currentSong);
+        }
       }
-      if (hasMp3 && currentAudio) {
-        currentAudio.play().then(function() {
-          audioStarted = true;
-        }).catch(function() {
-          if (audioCtx) {
-            playProceduralSong(audioCtx, currentSong, audioCtx.currentTime + 0.3);
-          }
-        });
-      } else if (audioCtx) {
-        playProceduralSong(audioCtx, currentSong, audioCtx.currentTime + 0.3);
+
+      if (audioCtx) {
+        if (audioCtx.state === 'suspended') {
+          console.log('AudioContext suspended, calling resume()...');
+          audioCtx.resume().then(function() {
+            console.log('AudioContext resumed, state:', audioCtx.state);
+            beginAudio();
+          }).catch(function(e) {
+            console.error('AudioContext resume failed:', e);
+            beginAudio();
+          });
+        } else {
+          beginAudio();
+        }
       }
     } else {
       countdownEl.style.display = 'none';
@@ -339,6 +361,7 @@ function startGame() {
 
 function endGame() {
   gameRunning = false;
+  stopRoundAudio();
   if (animationId) {
     cancelAnimationFrame(animationId);
     animationId = null;
