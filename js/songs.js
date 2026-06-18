@@ -162,9 +162,9 @@ function _pKick(ctx, t, vol) {
   o.frequency.setValueAtTime(150, t);
   o.frequency.exponentialRampToValueAtTime(30, t + 0.12);
   o.type = 'sine';
-  g.gain.setValueAtTime(vol * 0.35, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-  o.start(t); o.stop(t + 0.2);
+  g.gain.setValueAtTime(vol * 0.5, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+  o.start(t); o.stop(t + 0.22);
 }
 
 function _pClap(ctx, t, vol) {
@@ -174,8 +174,8 @@ function _pClap(ctx, t, vol) {
   f.type = 'bandpass'; f.frequency.value = 2000; f.Q.value = 1.5;
   const g = ctx.createGain();
   src.connect(f); f.connect(g); g.connect(ctx.destination);
-  g.gain.setValueAtTime(vol * 0.1, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+  g.gain.setValueAtTime(vol * 0.18, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
   src.start(t); src.stop(t + 0.1);
 }
 
@@ -186,8 +186,8 @@ function _pHat(ctx, t, vol) {
   f.type = 'highpass'; f.frequency.value = 5000;
   const g = ctx.createGain();
   src.connect(f); f.connect(g); g.connect(ctx.destination);
-  g.gain.setValueAtTime(vol * 0.06, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+  g.gain.setValueAtTime(vol * 0.1, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
   src.start(t); src.stop(t + 0.06);
 }
 
@@ -197,9 +197,9 @@ function _pBass(ctx, freq, t, dur) {
   o.connect(g); g.connect(ctx.destination);
   o.frequency.setValueAtTime(freq, t);
   o.type = 'sawtooth';
-  g.gain.setValueAtTime(0.05, t);
-  g.gain.linearRampToValueAtTime(0.03, t + dur * 0.3);
-  g.gain.setValueAtTime(0.03, t + dur - 0.03);
+  g.gain.setValueAtTime(0.1, t);
+  g.gain.linearRampToValueAtTime(0.06, t + dur * 0.3);
+  g.gain.setValueAtTime(0.06, t + dur - 0.03);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
   o.start(t); o.stop(t + dur + 0.02);
 }
@@ -209,25 +209,42 @@ function _pLead(ctx, freq, t, dur) {
   const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
   o.frequency.setValueAtTime(freq, t);
-  o.type = 'square';
-  g.gain.setValueAtTime(0.03, t);
-  g.gain.linearRampToValueAtTime(0.02, t + dur * 0.3);
-  g.gain.setValueAtTime(0.02, t + dur - 0.04);
+  o.type = 'triangle';
+  g.gain.setValueAtTime(0.08, t);
+  g.gain.linearRampToValueAtTime(0.05, t + dur * 0.3);
+  g.gain.setValueAtTime(0.05, t + dur - 0.04);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
   o.start(t); o.stop(t + dur + 0.02);
+}
+
+const _DEFAULT_CHORDS = [
+  { root: 110, notes: [110, 130.81, 164.81] },
+  { root: 174.61, notes: [174.61, 220, 261.63] },
+  { root: 130.81, notes: [130.81, 164.81, 196] },
+  { root: 196, notes: [196, 246.94, 293.66] }
+];
+
+function _getChords(song) {
+  if (song.chords && song.chords.length > 0) return song.chords;
+  const count = Math.max(1, Math.floor(getBeatsInSong(song) / 4));
+  const chords = [];
+  for (let i = 0; i < count; i++) {
+    chords.push(_DEFAULT_CHORDS[i % _DEFAULT_CHORDS.length]);
+  }
+  return chords;
 }
 
 function playProceduralSong(ctx, song, startTime) {
   if (!ctx) return;
   const beatDur = 60 / song.bpm;
   const beats = getBeatsInSong(song);
-  const chordChanges = Math.floor(beats / 4);
+  const chords = _getChords(song);
 
   for (let beat = 0; beat < beats; beat++) {
     const t = startTime + beat * beatDur;
     const bm = beat % 4;
-    const ci = Math.floor(beat / 4) % song.chords.length;
-    const chord = song.chords[ci];
+    const ci = Math.floor(beat / 4) % chords.length;
+    const chord = chords[ci];
 
     if (bm === 0) _pKick(ctx, t, 1.0);
     if (bm === 2) _pKick(ctx, t, 0.7);
@@ -239,10 +256,9 @@ function playProceduralSong(ctx, song, startTime) {
     else if (bm === 2) _pBass(ctx, chord.root * 2, t, beatDur * 0.8);
   }
 
-  for (let ci = 0; ci < chordChanges; ci++) {
-    const startBeat = ci * 4;
-    const chord = song.chords[ci % song.chords.length];
-    const ct = startTime + startBeat * beatDur;
+  for (let ci = 0; ci < chords.length; ci++) {
+    const chord = chords[ci];
+    const ct = startTime + ci * 4 * beatDur;
     for (let i = 0; i < 8; i++) {
       const ni = i % chord.notes.length;
       const oct = Math.floor(i / chord.notes.length);
