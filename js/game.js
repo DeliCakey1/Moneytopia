@@ -1,6 +1,5 @@
 const LANE_COUNT = 4;
 const LANE_KEYS = ['d', 'f', 'j', 'k'];
-const SONG_DURATION = 45;
 const GAME_SPEED = 1.0;
 const NOTE_HEIGHT = 60;
 
@@ -19,6 +18,11 @@ let perfectCount = 0;
 let goodCount = 0;
 let missCount = 0;
 let hitZoneY = 0;
+let currentSong = null;
+
+function getSongDuration() {
+  return currentSong ? currentSong.duration : 45;
+}
 
 function initGameCanvas() {
   canvas = document.getElementById('gameCanvas');
@@ -36,31 +40,9 @@ function initGameCanvas() {
   hitZoneY = canvas.height - 80;
 }
 
-function generateBeatMap() {
-  notes = [];
-  noteIdCounter = 0;
-  const bpm = 120 + Math.floor(Math.random() * 40);
-  const beatInterval = 60 / bpm;
-  const totalBeats = Math.floor(SONG_DURATION / beatInterval);
-  const density = 0.35 + Math.random() * 0.25;
-
-  for (let beat = 0; beat < totalBeats; beat++) {
-    if (Math.random() < density) {
-      const lane = Math.floor(Math.random() * LANE_COUNT);
-      const time = beat * beatInterval + Math.random() * beatInterval * 0.3;
-      if (time < SONG_DURATION) {
-        notes.push({
-          id: noteIdCounter++,
-          lane,
-          time,
-          hit: false,
-          missed: false
-        });
-      }
-    }
-  }
-
-  notes.sort((a, b) => a.time - b.time);
+function generateNotesFromSong() {
+  notes = generateSongNotes(currentSong);
+  noteIdCounter = notes.length;
 }
 
 function getNoteY(note) {
@@ -140,7 +122,7 @@ function drawGame() {
 
   ctx.shadowBlur = 0;
 
-  const remaining = Math.max(0, SONG_DURATION - songTime);
+  const remaining = Math.max(0, getSongDuration() - songTime);
   ctx.fillStyle = '#aaa';
   ctx.textAlign = 'center';
   ctx.font = '14px Rajdhani, sans-serif';
@@ -156,7 +138,7 @@ function gameLoop(timestamp) {
 
   songTime += delta;
 
-  if (songTime >= SONG_DURATION + 3) {
+  if (songTime >= getSongDuration() + 3) {
     endGame();
     return;
   }
@@ -259,12 +241,17 @@ function startGame() {
   const canvasWrapper = document.getElementById('game-canvas-wrapper');
   const readyScreen = document.getElementById('game-ready');
   const countdownEl = document.getElementById('game-countdown');
+  const songNameEl = document.getElementById('game-song');
   
   readyScreen.style.display = 'none';
   canvasWrapper.style.display = 'block';
   
+  currentSong = SONGS[Math.floor(Math.random() * SONGS.length)];
+  songNameEl.textContent = currentSong.name + ' - ' + currentSong.bpm + ' BPM';
+  songNameEl.style.display = 'block';
+  
   initGameCanvas();
-  generateBeatMap();
+  generateNotesFromSong();
   
   initAudio();
   
@@ -282,6 +269,9 @@ function startGame() {
   updateGameUI();
   
   if (animationId) cancelAnimationFrame(animationId);
+  
+  const songStartTime = audioCtx.currentTime + 3.5;
+  playSong(audioCtx, currentSong, songStartTime);
   
   let count = 3;
   countdownEl.textContent = count;
@@ -310,6 +300,9 @@ function endGame() {
     cancelAnimationFrame(animationId);
     animationId = null;
   }
+
+  stopSong();
+  document.getElementById('game-song').style.display = 'none';
 
   const coinsEarned = Math.floor(gameScore / 50) + Math.floor(maxCombo / 5);
   const heartsLost = 4 + Math.floor(Math.random() * 4);

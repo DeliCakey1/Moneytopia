@@ -195,6 +195,24 @@ body {
   font-weight: 700;
 }
 
+.game-song {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.9rem;
+  color: #00e5ff;
+  text-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+  z-index: 10;
+  display: none;
+  background: rgba(0,0,0,0.5);
+  padding: 4px 16px;
+  border-radius: 12px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
 .game-countdown {
   position: absolute;
   top: 50%;
